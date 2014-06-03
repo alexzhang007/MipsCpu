@@ -1,0 +1,9 @@
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/proj_def.vh
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/alu_cntl.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/alu.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/control.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/cpu.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/dmem.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/multiplexor.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/reg_file.v
+/proj/blza0/wa/alzhang/proj/eff_verilog/mips_pipe/test_cpu.v

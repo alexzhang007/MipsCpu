@@ -1,0 +1,13 @@
+Project : *MIPS RISC32*
+Author  : *Alex Zhang (cgzhangwei@gmail.com)*
+Features:
+1.RTL Status 
+  MIPS CPU testbench is already and basic rtl compile is OK. - Jun.03.2014
+2.Functions
+
+3.Tests
+  3.1 add.rom
+      load $s1, 100{$s0}
+      load $s2, 104{$s0}
+      add  $s3, $s1, $s2
+      sw   $s3, 100{$s0}
