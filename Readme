@@ -2,12 +2,18 @@ Project : *MIPS RISC32*
 Author  : *Alex Zhang (cgzhangwei@gmail.com)*
 Features:
 1.RTL Status 
-  MIPS CPU testbench is already and basic rtl compile is OK. - Jun.03.2014
+  * Jun.03.2014
+    MIPS CPU testbench is already and basic rtl compile is OK. 
+  * Jun.04.2014
+    Clean up the vcs warnings like port width mismatch, and signal declaration. 
+    Add the memory dumping in the test_cpu.v.
 2.Functions
 
 3.Tests
-  3.1 add.rom
-      load $s1, 100{$s0}
-      load $s2, 104{$s0}
-      add  $s3, $s1, $s2
-      sw   $s3, 100{$s0}
+  3.1 add.rom ; Figure 2.13
+      load $s1, 100{$s0} ; 8E110064
+      load $s2, 104{$s0} ; 8E120068
+      add  $s3, $s1, $s2 ; 02329820
+      add.drom ;load into ram. 
+      @64 00000001
+      @68 00000002

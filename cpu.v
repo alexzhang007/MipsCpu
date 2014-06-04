@@ -8,67 +8,71 @@ resetn
 
 input clk;
 input resetn;
+wire [`ALU_CNTL_OP_W-1 : 0] wOp;
 //Declaration for Instruction Fetch pipeline 
-reg [`REG_W-1:0] rPC;
-reg [`INST_W-1:0] iMem[0:`IMEM_SIZE-1]; 
-reg [`INST_W-1:0] rInstFetch;
-reg [`REG_W-1:0]  IF_ID_ppPC;          //rPC pipelined register at IF/ID
-reg [`INST_W-1:0] IF_ID_ppInstFetch;   //rInstFetch pipelined register at IF/ID
+reg [`REG_W-1:0]      rPC;
+reg [`INST_W-1:0]     iMem[0:`IMEM_SIZE-1]; 
+reg [`INST_W-1:0]     rInstFetch;
+reg [`REG_W-1:0]      IF_ID_ppPC;          //rPC pipelined register at IF/ID
+reg [`INST_W-1:0]     IF_ID_ppInstFetch;   //rInstFetch pipelined register at IF/ID
 
 //Declaration for Instruction Decode pipeline 
-wire [`REG_W-1:0]    wRtData;
-wire [`REG_W-1:0]    wRsData;
-reg  [`REG_W-1:0]    ID_EX_ppPC;
-reg  [`RF_REG_W-1:0] ID_EX_ppRd;
-reg  [`RF_REG_W-1:0] ID_EX_ppRt;
-reg  [`RF_REG_W-1:0] ID_EX_ppRs;
-reg  [`REG_W-1:0]    ID_EX_ppRtData;   //wRtData pipelined register at ID/EX
-reg  [`REG_W-1:0]    ID_EX_ppRdData;   //wRtData pipelined register at ID/EX
-reg  [`REG_W-1:0]    ID_EX_ppRsData;   //wRsData pipelined register at ID/EX
-reg  [`REG_W-1:0]    ID_EX_ppImmed;
-wire                 wRegWr;            
-reg                  ID_EX_ppRegWr;    //wRegWr pipelined register at ID/EX
-wire                 wMemtoReg;
-reg                  ID_EX_ppMemtoReg; //wMemtoReg pipelined register at ID/EX
-wire                 wMemRd;
-reg                  ID_EX_ppMemRd;    //wMemRd pipelined register at ID/EX
-wire                 wMemWr;
-reg                  ID_EX_ppMemWr;    //wMemWr pipelined register at ID/EX
-wire                 wRegDst;  
-reg                  ID_EX_ppRegDst;   //wRegDst pipelined register at ID/EX
-wire [1:0]           wALUOp;
-reg  [1:0]           ID_EX_ppALUOp;    //wALUOp pipelined register at ID/EX
-wire                 wALUSrc;
-reg                  ID_EX_ppALUSrc;   //wMemWr pipelined register at ID/EX
-wire                 wBranch;
-reg                  ID_EX_ppBranch;
+wire [`REG_W-1:0]     wRtData;
+wire [`REG_W-1:0]     wRsData;
+reg  [`REG_W-1:0]     ID_EX_ppPC;
+reg  [`RF_REG_W-1:0]  ID_EX_ppRd;
+reg  [`RF_REG_W-1:0]  ID_EX_ppRt;
+reg  [`RF_REG_W-1:0]  ID_EX_ppRs;
+reg  [`REG_W-1:0]     ID_EX_ppRtData;   //wRtData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_ppRdData;   //wRtData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_ppRsData;   //wRsData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_ppImmed;
+wire                  wRegWr;            
+reg                   ID_EX_ppRegWr;    //wRegWr pipelined register at ID/EX
+wire                  wMemtoReg;
+reg                   ID_EX_ppMemtoReg; //wMemtoReg pipelined register at ID/EX
+wire                  wMemRd;
+reg                   ID_EX_ppMemRd;    //wMemRd pipelined register at ID/EX
+wire                  wMemWr;
+reg                   ID_EX_ppMemWr;    //wMemWr pipelined register at ID/EX
+wire                  wRegDst;  
+reg                   ID_EX_ppRegDst;   //wRegDst pipelined register at ID/EX
+wire [1:0]            wALUOp;
+reg  [1:0]            ID_EX_ppALUOp;    //wALUOp pipelined register at ID/EX
+wire                  wALUSrc;
+reg                   ID_EX_ppALUSrc;   //wMemWr pipelined register at ID/EX
+wire                  wBranch;
+reg                   ID_EX_ppBranch;
 
 //Declaration for Execution pipeline 
-reg [`INST_W-1:0]    EX_MEM_ppPC;        //rPC pipelined register at EX/MEM 
-reg [`INST_W-1:0]    rNextPC;
-wire [`INST_W-1:0]   wMuxBOut;
-wire [`RF_REG_W-1:0] wMuxCOut;
-reg  [`RF_REG_W-1:0] EX_MEM_ppWrReg;
-reg                  EX_MEM_ppZero;
-reg  [`DATA_W-1:0]   EX_MEM_ppALUOut;
-reg  [`DATA_W-1:0]   EX_MEM_ppRtData;
-reg                  EX_MEM_ppMemWr;
-reg                  EX_MEM_ppMemRd;
-reg                  EX_MEM_ppBranch;
-reg                  EX_MEM_ppRegWr;
-reg                  EX_MEM_ppMemtoReg;
+reg [`INST_W-1:0]     EX_MEM_ppPC;        //rPC pipelined register at EX/MEM 
+reg [`INST_W-1:0]     rNextPC;
+wire [`INST_W-1:0]    wMuxBOut;
+wire [`RF_REG_W-1:0]  wMuxCOut;
+wire [`DATA_W-1 : 0]  wALUOut;
+wire                  wOverflow;
+reg  [`RF_REG_W-1:0]  EX_MEM_ppWrReg;
+reg                   EX_MEM_ppZero;
+reg  [`DATA_W-1:0]    EX_MEM_ppALUOut;
+reg  [`DATA_W-1:0]    EX_MEM_ppRtData;
+reg                   EX_MEM_ppMemWr;
+reg                   EX_MEM_ppMemRd;
+reg                   EX_MEM_ppBranch;
+reg                   EX_MEM_ppRegWr;
+reg                   EX_MEM_ppMemtoReg;
 
 //Declaration for Memory pipeline 
 reg [`RF_REG_W -1:0 ] MEM_WB_ppWrReg; //rWrReg pipelined register at MEM/WB, WrReg and WrData pair
 reg                   MEM_WB_ppRegWr; //rRegWr pipelined register at MEM/WB 
 wire                  wPCSrc;
+wire [`DATA_W-1:0]    wMemData;
 reg [`DATA_W-1:0]     MEM_WB_ppMemData;
 reg [`DATA_W-1:0]     MEM_WB_ppALUOut;
 reg                   MEM_WB_ppRegWr;
 reg                   MEM_WB_ppMemtoReg;
 
 //Declaration for Write Back pipeline 
-wire [`DATA_W-1:0] wWrData;
+wire [`DATA_W-1:0]    wWrData;
 
 //Function implementation of Instruction Fetech pipeline 
 always @(posedge clk or negedge resetn) begin 
@@ -86,8 +90,8 @@ end
 
 //Function implementation of Instruction Decode pipeline 
 reg_file register_file (
-  .iReg1(IF_ID_rInstFetch[25:21]),
-  .iReg2(IF_ID_rInstFetch[20:16]),
+  .iReg1(IF_ID_ppInstFetch[25:21]),
+  .iReg2(IF_ID_ppInstFetch[20:16]),
   .iWrReg3(MEM_WB_ppWrReg),
   .iRegWr(MEM_WB_ppRegWr),
   .iWrData(wWrData),
@@ -134,14 +138,15 @@ control controlID(
     .clk(clk),
     .resetn(resetn),
     .iOp(IF_ID_ppInstFetch[31:26]),
+    .iOverflow(wOverflow),
+    .oRegDst(wRegDst),
     .oRegWr(wRegWr),
     .oMemtoReg(wMemtoReg),
-    .oMemRd(wMemRd),
-    .oMemWr(wMemWr),
-    .oRegDst(wRegDst),
     .oALUOp(wALUOp),
     .oALUSrc(wALUSrc),
-    .oBranch(wBranch)
+    .oBranch(wBranch),
+    .oMemRd(wMemRd),
+    .oMemWr(wMemWr)
 );
 //Function implementation of Instruction Execute pipeline 
 //
@@ -157,7 +162,7 @@ alu_32 alu(
   .iOp(wOp),
   .oALU(wALUOut),
   .oZero(wZero),
-  .oOverflow(),
+  .oOverflow(wOverflow),
   .oUnderflow()
 );
 alu_cntl alu_control(
@@ -195,7 +200,7 @@ end
 //
 assign wPCSrc = EX_MEM_ppZero & EX_MEM_ppBranch;
 dmem ram(
-  .iAddr(EX_MEM_ALUOut),
+  .iAddr(EX_MEM_ppALUOut),
   .iWrData(EX_MEM_ppRtData),
   .iMemWr(EX_MEM_ppMemWr),
   .iMemRd(EX_MEM_ppMemRd),

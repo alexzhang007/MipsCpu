@@ -18,8 +18,13 @@ input iRegWr;
 output oReg1;
 output oReg2;
 
-reg [`DATA_W -1:0] oReg1;
-reg [`DATA_W -1:0] oReg2;
+reg [`DATA_W -1:0]   oReg1;
+reg [`DATA_W -1:0]   oReg2;
+wire [`RF_REG_W-1:0] iReg1;
+wire [`RF_REG_W-1:0] iReg2;
+wire [`RF_REG_W-1:0] iWrReg3;
+wire [`DATA_W-1:0]   iWrData;
+wire                 iRegWr;
 
 reg [`DATA_W -1:0] general_regs[0:`RF_REG_NUM-1];
 

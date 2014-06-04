@@ -15,12 +15,19 @@ initial begin
     $fsdbDumpfile("./out/mips_cpu.fsdb");
     $fsdbDumpvars(0, test);
 end 
+
+always @(posedge clk) begin 
+    $fsdbDumpMem(MIPS_CPU.iMem);
+    $fsdbDumpMem(MIPS_CPU.ram.dMem);
+end 
+
 task basic ;
     begin 
         $display("MIPS-RISC32 1.0: This is the basic sanity test.");
         #1;
         $display("Loading program memory wth %s", "add.rom");
         $readmemh("add.rom",MIPS_CPU.iMem );
+        $readmemh("add.drom",MIPS_CPU.ram.dMem );
         fork
             drive_clock;
             reset_unit;
