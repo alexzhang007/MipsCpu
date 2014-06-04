@@ -1,3 +1,7 @@
+//Author      : Alex Zhang (cgzhangwei@gmail.com)
+//Date        : Jun. 04. 2014
+//Description : Create the testbench
+//              Fix Bug7: Loading the register_file with 0 data. Sequential logic should be used in that block. But i notice that when computer is sleeping, resuming can call back the original data. So i try to use the loading. 
 module test;
 reg clk;
 reg resetn;
@@ -19,6 +23,7 @@ end
 always @(posedge clk) begin 
     $fsdbDumpMem(MIPS_CPU.iMem);
     $fsdbDumpMem(MIPS_CPU.ram.dMem);
+    $fsdbDumpMem(MIPS_CPU.register_file.rMem);
 end 
 
 task basic ;
@@ -28,6 +33,7 @@ task basic ;
         $display("Loading program memory wth %s", "add.rom");
         $readmemh("add.rom",MIPS_CPU.iMem );
         $readmemh("add.drom",MIPS_CPU.ram.dMem );
+        $readmemh("reg.rom",MIPS_CPU.register_file.rMem );
         fork
             drive_clock;
             reset_unit;

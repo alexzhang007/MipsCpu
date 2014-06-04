@@ -1,6 +1,7 @@
 //Author      : Alex Zhang (cgzhangwei@gmail.com)
 //Date        : May. 16. 2014
 //Description : Implement the pipelined MIPS CPU with Figure 6.27 w/o Hazards detection and Data stall
+//              Fix Bug8: ID and EX stages are misaligned
 module cpu(
 clk,
 resetn
@@ -27,6 +28,15 @@ reg  [`REG_W-1:0]     ID_EX_ppRtData;   //wRtData pipelined register at ID/EX
 reg  [`REG_W-1:0]     ID_EX_ppRdData;   //wRtData pipelined register at ID/EX
 reg  [`REG_W-1:0]     ID_EX_ppRsData;   //wRsData pipelined register at ID/EX
 reg  [`REG_W-1:0]     ID_EX_ppImmed;
+//Add the pp2 since the control has one extra delay.
+reg  [`REG_W-1:0]     ID_EX_pp2PC;
+reg  [`RF_REG_W-1:0]  ID_EX_pp2Rd;
+reg  [`RF_REG_W-1:0]  ID_EX_pp2Rt;
+reg  [`RF_REG_W-1:0]  ID_EX_pp2Rs;
+reg  [`REG_W-1:0]     ID_EX_pp2RtData;   //wRtData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_pp2RdData;   //wRtData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_pp2RsData;   //wRsData pipelined register at ID/EX
+reg  [`REG_W-1:0]     ID_EX_pp2Immed;
 wire                  wRegWr;            
 reg                   ID_EX_ppRegWr;    //wRegWr pipelined register at ID/EX
 wire                  wMemtoReg;
@@ -76,10 +86,12 @@ wire [`DATA_W-1:0]    wWrData;
 
 //Function implementation of Instruction Fetech pipeline 
 always @(posedge clk or negedge resetn) begin 
-    if (~resetn) 
-        rPC <= 32'b0;
-    else begin 
-        rPC              <= wPCSrc ? EX_MEM_ppPC: rPC +32'h4 ; //muxTowA
+    if (~resetn) begin
+        rPC               <= 32'b0;
+        IF_ID_ppPC        <= 32'b0;
+        IF_ID_ppInstFetch <= 32'b0;
+    end else begin 
+        rPC               <= wPCSrc ? EX_MEM_ppPC: rPC +32'h4 ; //muxTowA
         IF_ID_ppPC        <= rPC +32'h4;
         IF_ID_ppInstFetch <= rInstFetch; 
     end 
@@ -90,6 +102,8 @@ end
 
 //Function implementation of Instruction Decode pipeline 
 reg_file register_file (
+  .clk(clk),
+  .resetn(resetn),
   .iReg1(IF_ID_ppInstFetch[25:21]),
   .iReg2(IF_ID_ppInstFetch[20:16]),
   .iWrReg3(MEM_WB_ppWrReg),
@@ -103,9 +117,20 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_ppPC      <= 32'h0;
         ID_EX_ppRdData  <= 32'h0;
         ID_EX_ppRsData  <= 32'h0;
+        ID_EX_ppRtData  <= 32'h0;
         ID_EX_ppRs      <= 5'h0;
         ID_EX_ppRt      <= 5'h0;
+        ID_EX_ppRd      <= 5'h0;
         ID_EX_ppImmed   <= 32'h0;
+        ID_EX_pp2PC     <= 32'h0;
+        ID_EX_pp2RdData <= 32'h0;
+        ID_EX_pp2RsData <= 32'h0;
+        ID_EX_pp2RtData <= 32'h0;
+        ID_EX_pp2Rs     <= 5'h0;
+        ID_EX_pp2Rt     <= 5'h0;
+        ID_EX_pp2Rd     <= 5'h0;
+        ID_EX_pp2Immed  <= 32'h0;
+
         ID_EX_ppRegWr   <= 1'b0; 
         ID_EX_ppMemtoReg<= 1'b0;
         ID_EX_ppMemRd   <= 1'b0; 
@@ -122,6 +147,13 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_ppRd      <= IF_ID_ppInstFetch[15:11];
         ID_EX_ppImmed   <= IF_ID_ppInstFetch[15] ? {IF_ID_ppInstFetch[15], 16'hFFFF, IF_ID_ppInstFetch[14:0]}  //neg integer
                                                  : {17'h0, IF_ID_ppInstFetch[14:0]};                           //pos integer
+        ID_EX_pp2PC     <= ID_EX_ppPC;
+        ID_EX_pp2RsData <= ID_EX_ppRsData;
+        ID_EX_pp2RtData <= ID_EX_ppRtData;
+        ID_EX_pp2Rt     <= ID_EX_ppRt;
+        ID_EX_pp2Rd     <= ID_EX_ppRd;
+        ID_EX_pp2Immed  <= ID_EX_ppImmed;
+  
         //Control pipelined bundles
         ID_EX_ppRegWr   <= wRegWr; 
         ID_EX_ppMemtoReg<= wMemtoReg;
@@ -150,14 +182,15 @@ control controlID(
 );
 //Function implementation of Instruction Execute pipeline 
 //
-always @(ID_EX_ppPC or ID_EX_ppImmed) begin 
-    rNextPC = ID_EX_ppPC + {ID_EX_ppImmed[31], ID_EX_ppImmed[30:0]<<2, 2'b00};  //Is it right for neg value?
+always @(ID_EX_pp2PC or ID_EX_pp2Immed) begin 
+    rNextPC = ID_EX_pp2PC + {ID_EX_pp2Immed[31], ID_EX_pp2Immed[30:0]<<2, 2'b00};  //Is it right for neg value?
 end 
-assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_ppImmed: ID_EX_ppRtData ;
-assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_ppRt:ID_EX_ppRd ;
+//Fix Bug8: wALUSrc already pipelined once in the controlID
+assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: ID_EX_pp2RtData ;
+assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_pp2Rt:ID_EX_pp2Rd ;
 
 alu_32 alu(
-  .iA(ID_EX_ppRsData),
+  .iA(ID_EX_pp2RsData),
   .iB(wMuxBOut),
   .iOp(wOp),
   .oALU(wALUOut),
@@ -166,7 +199,7 @@ alu_32 alu(
   .oUnderflow()
 );
 alu_cntl alu_control(
-  .iInstFunct(ID_EX_ppImmed[5:0]),
+  .iInstFunct(ID_EX_pp2Immed[5:0]),
   .iALUOp(ID_EX_ppALUOp),
   .oOp(wOp)
 );
@@ -186,7 +219,7 @@ always @(posedge clk or negedge resetn) begin
         EX_MEM_ppPC         <= rNextPC;
         EX_MEM_ppZero       <= wZero;
         EX_MEM_ppALUOut     <= wALUOut;
-        EX_MEM_ppRtData     <= ID_EX_ppRtData;
+        EX_MEM_ppRtData     <= ID_EX_pp2RtData;
         EX_MEM_ppWrReg      <= wMuxCOut;
         EX_MEM_ppMemWr      <= ID_EX_ppMemWr;
         EX_MEM_ppMemRd      <= ID_EX_ppMemRd;
