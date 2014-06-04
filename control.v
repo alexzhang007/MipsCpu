@@ -73,7 +73,7 @@ always @(*) begin
         S_INS_LW : begin 
                        oRegDst   = 1'b0;
                        oRegWr    = 1'b1;
-                       oMemtoReg = 1'b1;
+                       oMemtoReg = 1'b0;
                        oALUOp    = 2'b00;
                        oALUSrc   = 1'b1;
                        oMemWr    = 1'b0;
@@ -97,7 +97,7 @@ always @(*) begin
         S_INS_RT : begin 
                        oRegDst   = 1'b1;
                        oRegWr    = 1'b1;
-                       oMemtoReg = 1'b0;
+                       oMemtoReg = 1'b1;
                        oALUOp    = 2'b10; //ALU depend on the functor
                        oALUSrc   = 1'b0;  //ALU B-branch is from Rt
                        oMemWr    = 1'b0;  //

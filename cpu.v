@@ -187,7 +187,7 @@ always @(ID_EX_pp2PC or ID_EX_pp2Immed) begin
 end 
 //Fix Bug8: wALUSrc already pipelined once in the controlID
 assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: ID_EX_pp2RtData ;
-assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_pp2Rt:ID_EX_pp2Rd ;
+assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_pp2Rd   : ID_EX_pp2Rt ;
 
 alu_32 alu(
   .iA(ID_EX_pp2RsData),
