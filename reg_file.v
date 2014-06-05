@@ -38,12 +38,11 @@ always @(posedge clk or negedge resetn)  begin
         oReg1 <= 32'b0;
         oReg2 <= 32'b0;
     end else begin 
-        if (~iRegWr) begin 
-            oReg1 <= rMem[iReg1];
-            oReg2 <= rMem[iReg2];
-        end else begin 
+        if (iRegWr) begin 
             rMem[iWrReg3] <= iWrData;
         end
+        oReg1 <= rMem[iReg1];
+        oReg2 <= rMem[iReg2];
     end 
 end
 endmodule 

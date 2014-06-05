@@ -7,6 +7,9 @@ Features:
   * Jun.04.2014
     Clean up the vcs warnings like port width mismatch, and signal declaration. 
     Add the memory dumping in the test_cpu.v.
+  * Jun.05.2014
+    The case add.rom can be passed with adding NOP before add instruciton
+
 2.Functions
 
 3.Tests

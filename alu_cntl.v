@@ -25,12 +25,13 @@ always @(iInstFunct or iALUOp) begin
     casex ({iALUOp, iInstFunct}) 
        8'b00?????? : oOp = 6'h02; //Add operation  
        8'b01?????? : oOp = 6'h06; //Substract operation
-       8'b10010000 : oOp = 6'h02; //R-format Add 
-       8'b10010010 : oOp = 6'h06; //R-format Sub
-       8'b10010100 : oOp = 6'h00; //R-format And
-       8'b10010101 : oOp = 6'h01; //R-format Or
-       8'b10011010 : oOp = 6'h07; //R-format Slt
-       default : $display("Error encoding in alu_cntl");
+       8'b10000000 : oOp = 6'h02; //R-format Nop
+       8'b10100000 : oOp = 6'h02; //R-format Add 
+       8'b10100010 : oOp = 6'h06; //R-format Sub
+       8'b10100100 : oOp = 6'h00; //R-format And
+       8'b10100101 : oOp = 6'h01; //R-format Or
+       8'b10101010 : oOp = 6'h07; //R-format Slt
+       default : $display("%m Error encoding in alu_cntl", $time);
     endcase
 end 
 endmodule 

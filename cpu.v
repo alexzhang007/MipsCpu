@@ -33,9 +33,6 @@ reg  [`REG_W-1:0]     ID_EX_pp2PC;
 reg  [`RF_REG_W-1:0]  ID_EX_pp2Rd;
 reg  [`RF_REG_W-1:0]  ID_EX_pp2Rt;
 reg  [`RF_REG_W-1:0]  ID_EX_pp2Rs;
-reg  [`REG_W-1:0]     ID_EX_pp2RtData;   //wRtData pipelined register at ID/EX
-reg  [`REG_W-1:0]     ID_EX_pp2RdData;   //wRtData pipelined register at ID/EX
-reg  [`REG_W-1:0]     ID_EX_pp2RsData;   //wRsData pipelined register at ID/EX
 reg  [`REG_W-1:0]     ID_EX_pp2Immed;
 wire                  wRegWr;            
 reg                   ID_EX_ppRegWr;    //wRegWr pipelined register at ID/EX
@@ -123,9 +120,6 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_ppRd      <= 5'h0;
         ID_EX_ppImmed   <= 32'h0;
         ID_EX_pp2PC     <= 32'h0;
-        ID_EX_pp2RdData <= 32'h0;
-        ID_EX_pp2RsData <= 32'h0;
-        ID_EX_pp2RtData <= 32'h0;
         ID_EX_pp2Rs     <= 5'h0;
         ID_EX_pp2Rt     <= 5'h0;
         ID_EX_pp2Rd     <= 5'h0;
@@ -148,8 +142,6 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_ppImmed   <= IF_ID_ppInstFetch[15] ? {IF_ID_ppInstFetch[15], 16'hFFFF, IF_ID_ppInstFetch[14:0]}  //neg integer
                                                  : {17'h0, IF_ID_ppInstFetch[14:0]};                           //pos integer
         ID_EX_pp2PC     <= ID_EX_ppPC;
-        ID_EX_pp2RsData <= ID_EX_ppRsData;
-        ID_EX_pp2RtData <= ID_EX_ppRtData;
         ID_EX_pp2Rt     <= ID_EX_ppRt;
         ID_EX_pp2Rd     <= ID_EX_ppRd;
         ID_EX_pp2Immed  <= ID_EX_ppImmed;
@@ -186,11 +178,11 @@ always @(ID_EX_pp2PC or ID_EX_pp2Immed) begin
     rNextPC = ID_EX_pp2PC + {ID_EX_pp2Immed[31], ID_EX_pp2Immed[30:0]<<2, 2'b00};  //Is it right for neg value?
 end 
 //Fix Bug8: wALUSrc already pipelined once in the controlID
-assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: ID_EX_pp2RtData ;
+assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: ID_EX_ppRtData ;
 assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_pp2Rd   : ID_EX_pp2Rt ;
 
 alu_32 alu(
-  .iA(ID_EX_pp2RsData),
+  .iA(ID_EX_ppRsData),
   .iB(wMuxBOut),
   .iOp(wOp),
   .oALU(wALUOut),
@@ -219,7 +211,7 @@ always @(posedge clk or negedge resetn) begin
         EX_MEM_ppPC         <= rNextPC;
         EX_MEM_ppZero       <= wZero;
         EX_MEM_ppALUOut     <= wALUOut;
-        EX_MEM_ppRtData     <= ID_EX_pp2RtData;
+        EX_MEM_ppRtData     <= ID_EX_ppRtData;
         EX_MEM_ppWrReg      <= wMuxCOut;
         EX_MEM_ppMemWr      <= ID_EX_ppMemWr;
         EX_MEM_ppMemRd      <= ID_EX_ppMemRd;
