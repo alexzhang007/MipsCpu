@@ -26,6 +26,35 @@ end
 
 endmodule 
 
+module mux_3 (
+iZeroBranch,
+iOneBranch,
+iTwoBranch,
+iSel,
+oMux
+);
+input iZeroBranch;
+input iOneBranch;
+input iTwoBranch;
+input iSel;
+output oMux;
+parameter DATA_WIDTH = 32;
+wire [DATA_WIDTH-1:0] iZeroBranch;
+wire [DATA_WIDTH-1:0] iOneBranch;
+wire [1:0]            iSel;
+reg  [DATA_WIDTH-1:0] oMux;
+
+always @(iSel) begin 
+    case (iSel) 
+        2'b00 : oMux = iZeroBranch;
+        2'b01 : oMux = iOneBranch;
+        2'b11 : oMux = iOneBranch;
+        default : oMux = iZeroBranch;
+    endcase 
+end 
+
+endmodule 
+
 module mux_4 (
 iZeroBranch,
 iOneBranch,

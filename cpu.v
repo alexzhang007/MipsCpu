@@ -1,7 +1,8 @@
 //Author      : Alex Zhang (cgzhangwei@gmail.com)
 //Date        : May. 16. 2014
-//Description : Implement the pipelined MIPS CPU with Figure 6.27 w/o Hazards detection and Data stall
+//Description : Implement the pipelined MIPS CPU with Figure 6.27 w/o Hazards detection and with Data stall
 //              Fix Bug8: ID and EX stages are misaligned
+//              Fix Bug11: Data hazard found in the add.rom
 module cpu(
 clk,
 resetn
@@ -52,12 +53,16 @@ wire                  wBranch;
 reg                   ID_EX_ppBranch;
 
 //Declaration for Execution pipeline 
-reg [`INST_W-1:0]     EX_MEM_ppPC;        //rPC pipelined register at EX/MEM 
-reg [`INST_W-1:0]     rNextPC;
+reg  [`INST_W-1:0]    EX_MEM_ppPC;        //rPC pipelined register at EX/MEM 
+reg  [`INST_W-1:0]    rNextPC;
 wire [`INST_W-1:0]    wMuxBOut;
 wire [`RF_REG_W-1:0]  wMuxCOut;
 wire [`DATA_W-1 : 0]  wALUOut;
 wire                  wOverflow;
+wire [1:0]            wForwardSelE;
+wire [1:0]            wForwardSelF;
+wire [`DATA_W-1:0]    wMuxEOut;
+wire [`DATA_W-1:0]    wMuxFOut;
 reg  [`RF_REG_W-1:0]  EX_MEM_ppWrReg;
 reg                   EX_MEM_ppZero;
 reg  [`DATA_W-1:0]    EX_MEM_ppALUOut;
@@ -67,6 +72,7 @@ reg                   EX_MEM_ppMemRd;
 reg                   EX_MEM_ppBranch;
 reg                   EX_MEM_ppRegWr;
 reg                   EX_MEM_ppMemtoReg;
+reg [`RF_REG_W-1:0]   EX_MEM_ppRd;
 
 //Declaration for Memory pipeline 
 reg [`RF_REG_W -1:0 ] MEM_WB_ppWrReg; //rWrReg pipelined register at MEM/WB, WrReg and WrData pair
@@ -75,8 +81,8 @@ wire                  wPCSrc;
 wire [`DATA_W-1:0]    wMemData;
 reg [`DATA_W-1:0]     MEM_WB_ppMemData;
 reg [`DATA_W-1:0]     MEM_WB_ppALUOut;
-reg                   MEM_WB_ppRegWr;
 reg                   MEM_WB_ppMemtoReg;
+reg [`RF_REG_W-1:0]   MEM_WB_ppRd;
 
 //Declaration for Write Back pipeline 
 wire [`DATA_W-1:0]    wWrData;
@@ -137,6 +143,7 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_ppPC      <= IF_ID_ppPC;
         ID_EX_ppRsData  <= wRsData;
         ID_EX_ppRtData  <= wRtData;
+        ID_EX_ppRs      <= IF_ID_ppInstFetch[25:21];
         ID_EX_ppRt      <= IF_ID_ppInstFetch[20:16];
         ID_EX_ppRd      <= IF_ID_ppInstFetch[15:11];
         ID_EX_ppImmed   <= IF_ID_ppInstFetch[15] ? {IF_ID_ppInstFetch[15], 16'hFFFF, IF_ID_ppInstFetch[14:0]}  //neg integer
@@ -178,23 +185,52 @@ always @(ID_EX_pp2PC or ID_EX_pp2Immed) begin
     rNextPC = ID_EX_pp2PC + {ID_EX_pp2Immed[31], ID_EX_pp2Immed[30:0]<<2, 2'b00};  //Is it right for neg value?
 end 
 //Fix Bug8: wALUSrc already pipelined once in the controlID
-assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: ID_EX_ppRtData ;
+assign wMuxBOut = ID_EX_ppALUSrc ? ID_EX_pp2Immed: wMuxFOut ;
 assign wMuxCOut = ID_EX_ppRegDst ? ID_EX_pp2Rd   : ID_EX_pp2Rt ;
 
 alu_32 alu(
-  .iA(ID_EX_ppRsData),
-  .iB(wMuxBOut),
+  .iA(wMuxEOut),
+  .iB(wMuxFOut),
   .iOp(wOp),
   .oALU(wALUOut),
   .oZero(wZero),
   .oOverflow(wOverflow),
   .oUnderflow()
 );
+
 alu_cntl alu_control(
   .iInstFunct(ID_EX_pp2Immed[5:0]),
   .iALUOp(ID_EX_ppALUOp),
   .oOp(wOp)
 );
+
+forward_unit fwd_unit(
+  .iID_EX_ppRs(ID_EX_ppRs),
+  .iID_EX_ppRt(ID_EX_ppRt),
+  .iEX_MEM_ppRd(EX_MEM_ppRd),
+  .iMEM_WB_ppRd(MEM_WB_ppRd),
+  .iEX_MEM_ppRegWr(EX_MEM_ppRegWr),
+  .iMEM_WB_ppRegWr(MEM_WB_ppRegWr),
+  .oForwardSelE(wForwardSelE),
+  .oForwardSelF(wForwardSelF)
+);
+
+mux_3 muxThreeE(
+  .iZeroBranch(ID_EX_ppRsData),
+  .iOneBranch(wWrData),
+  .iTwoBranch(EX_MEM_ppALUOut),
+  .iSel(wForwardSelE),
+  .oMux(wMuxEOut)
+);
+
+mux_3 muxThreeF(
+  .iZeroBranch(ID_EX_ppRtData),
+  .iOneBranch(wWrData),
+  .iTwoBranch(EX_MEM_ppALUOut),
+  .iSel(wForwardSelF),
+  .oMux(wMuxFOut)
+);
+
 always @(posedge clk or negedge resetn) begin 
     if (~resetn) begin 
         EX_MEM_ppPC <= 32'b0;
@@ -207,6 +243,7 @@ always @(posedge clk or negedge resetn) begin
         EX_MEM_ppBranch     <= 1'b0;
         EX_MEM_ppRegWr      <= 1'b0;
         EX_MEM_ppMemtoReg   <= 1'b0;
+        EX_MEM_ppRd         <= 5'b0;
     end else begin 
         EX_MEM_ppPC         <= rNextPC;
         EX_MEM_ppZero       <= wZero;
@@ -218,6 +255,7 @@ always @(posedge clk or negedge resetn) begin
         EX_MEM_ppBranch     <= ID_EX_ppBranch;
         EX_MEM_ppRegWr      <= ID_EX_ppRegWr;
         EX_MEM_ppMemtoReg   <= ID_EX_ppMemtoReg;
+        EX_MEM_ppRd         <= ID_EX_pp2Rd;
     end 
 end 
 
@@ -239,12 +277,14 @@ always @(posedge clk or negedge resetn) begin
         MEM_WB_ppRegWr   <= 1'b0;
         MEM_WB_ppMemtoReg<= 1'b0;
         MEM_WB_ppWrReg   <= 5'b0;
+        MEM_WB_ppRd      <= 5'b0;
     end else begin 
         MEM_WB_ppMemData <= wMemData;
         MEM_WB_ppALUOut  <= EX_MEM_ppALUOut;
         MEM_WB_ppRegWr   <= EX_MEM_ppRegWr;
         MEM_WB_ppMemtoReg<= EX_MEM_ppMemtoReg;
         MEM_WB_ppWrReg   <= EX_MEM_ppWrReg;
+        MEM_WB_ppRd      <= EX_MEM_ppRd;
     end 
 end 
 assign wWrData = MEM_WB_ppMemtoReg ? MEM_WB_ppALUOut: MEM_WB_ppMemData ;
