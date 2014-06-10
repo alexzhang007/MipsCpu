@@ -31,7 +31,7 @@ task basic ;
         $display("MIPS-RISC32 1.0: This is the basic sanity test.");
         #1;
         $display("Loading program memory wth %s", "add.rom");
-        $readmemh("add_bug11.rom",MIPS_CPU.iMem );
+        $readmemh("bug14.rom",MIPS_CPU.iMem );
         $readmemh("add.drom",MIPS_CPU.ram.dMem );
         $readmemh("reg.rom",MIPS_CPU.register_file.rMem );
         fork

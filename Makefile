@@ -1,5 +1,5 @@
 VCS=/proj/cadtools/bin/vcs
-SRC=proj_def.vh alu.v  alu_cntl.v control.v  cpu.v forward_unit.v dmem.v  multiplexor.v  reg_file.v  test_cpu.v
+SRC=proj_def.vh alu.v  alu_cntl.v control.v hazard_unit.v  cpu.v forward_unit.v dmem.v  multiplexor.v  reg_file.v  test_cpu.v
 TGT=simv
 VERICOM=/proj/cadtools/bin/vericom
 VERDI=/proj/cadtools/bin/verdi

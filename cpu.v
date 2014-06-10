@@ -3,6 +3,7 @@
 //Description : Implement the pipelined MIPS CPU with Figure 6.27 w/o Hazards detection and with Data stall
 //              Fix Bug8: ID and EX stages are misaligned
 //              Fix Bug11: Data hazard found in the add.rom
+//              Fix Bug14: Data hazard and stall the pipeline, adding the hazard_unit
 module cpu(
 clk,
 resetn
@@ -21,6 +22,9 @@ reg [`INST_W-1:0]     IF_ID_ppInstFetch;   //rInstFetch pipelined register at IF
 //Declaration for Instruction Decode pipeline 
 wire [`REG_W-1:0]     wRtData;
 wire [`REG_W-1:0]     wRsData;
+wire                  wPCWr;
+wire                  wIFDWr;
+wire                  wHazard;
 reg  [`REG_W-1:0]     ID_EX_ppPC;
 reg  [`RF_REG_W-1:0]  ID_EX_ppRd;
 reg  [`RF_REG_W-1:0]  ID_EX_ppRt;
@@ -94,9 +98,9 @@ always @(posedge clk or negedge resetn) begin
         IF_ID_ppPC        <= 32'b0;
         IF_ID_ppInstFetch <= 32'b0;
     end else begin 
-        rPC               <= wPCSrc ? EX_MEM_ppPC: rPC +32'h4 ; //muxTowA
-        IF_ID_ppPC        <= rPC +32'h4;
-        IF_ID_ppInstFetch <= rInstFetch; 
+        rPC               <= wPCSrc ? EX_MEM_ppPC  : ( wPCWr ? rPC-32'h8 : rPC +32'h4 ) ; //muxTowA
+        IF_ID_ppPC        <= wPCWr  ? IF_ID_ppPC   : rPC ;
+        IF_ID_ppInstFetch <= wIFDWr ? 32'b0 : rInstFetch;   //Fix Bug14: Insert a Bubble
     end 
 end 
 always @(rPC) begin
@@ -104,6 +108,19 @@ always @(rPC) begin
 end
 
 //Function implementation of Instruction Decode pipeline 
+//Fix Bug14: Using the ID_EX_ppRs instead of IF_ID_ppRs since there are two pipeline
+//registers in the ID_EX, it is designed like this since controlID has one cycle delay. 
+//If controlID has two cycles delay, ID_EX needs three registers.
+hazard_unit hzd_unit(
+  .iID_EX_ppMemRd(ID_EX_ppMemRd),
+  .iID_EX_ppRt(ID_EX_pp2Rt),
+  .iIF_ID_ppRs(ID_EX_ppRs),
+  .iIF_ID_ppRt(ID_EX_ppRt),
+  .oPCWr(wPCWr),
+  .oIFDWr(wIFDWr),
+  .oHazard(wHazard)
+);
+
 reg_file register_file (
   .clk(clk),
   .resetn(resetn),
@@ -154,14 +171,14 @@ always @(posedge clk or negedge resetn) begin
         ID_EX_pp2Immed  <= ID_EX_ppImmed;
   
         //Control pipelined bundles
-        ID_EX_ppRegWr   <= wRegWr; 
-        ID_EX_ppMemtoReg<= wMemtoReg;
-        ID_EX_ppMemRd   <= wMemRd; 
-        ID_EX_ppMemWr   <= wMemWr; 
-        ID_EX_ppRegDst  <= wRegDst;
-        ID_EX_ppALUOp   <= wALUOp; 
-        ID_EX_ppALUSrc  <= wALUSrc;
-        ID_EX_ppBranch  <= wBranch;
+        ID_EX_ppRegWr   <= wHazard ? 1'b0 : wRegWr; 
+        ID_EX_ppMemtoReg<= wHazard ? 1'b0 : wMemtoReg;
+        ID_EX_ppMemRd   <= wHazard ? 1'b0 : wMemRd; 
+        ID_EX_ppMemWr   <= wHazard ? 1'b0 : wMemWr; 
+        ID_EX_ppRegDst  <= wHazard ? 1'b0 : wRegDst;
+        ID_EX_ppALUOp   <= wHazard ? 2'b0 : wALUOp; 
+        ID_EX_ppALUSrc  <= wHazard ? 1'b0 : wALUSrc;
+        ID_EX_ppBranch  <= wHazard ? 1'b0 : wBranch;
     end 
 end 
 
@@ -169,6 +186,7 @@ control controlID(
     .clk(clk),
     .resetn(resetn),
     .iOp(IF_ID_ppInstFetch[31:26]),
+  //  .iFunc(IF_ID_ppInstFetch[5:0]),
     .iOverflow(wOverflow),
     .oRegDst(wRegDst),
     .oRegWr(wRegWr),

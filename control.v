@@ -1,6 +1,7 @@
 //Author      : Alex Zhang (cgzhangwei@gmail.com)
 //Date        : May. 12. 2014
 //Description : Implement the control
+//              Feature: Add the Nop instruction identificaiton.
 module control (
 clk, 
 resetn,
@@ -29,6 +30,7 @@ output oMemRd;
 output oMemWr;
 
 wire [5:0] iOp;
+wire [5:0] iFunc;
 reg        oRegDst;
 reg        oRegWr;
 reg        oALUSrc;
@@ -39,11 +41,12 @@ reg        oBranch;
 reg        oMemtoReg;
 
 reg [3:0] state;
-parameter RTYPE_INST = 6'h0;
-parameter BEQ_INST   = 6'h4;
-parameter LW_INST    = 6'h23;
-parameter SW_INST    = 6'h2B;
-parameter JMP_INST   = 6'h2;
+parameter NOP_INST   = 6'b000000;
+parameter RTYPE_INST = 6'b000000;
+parameter BEQ_INST   = 6'b000100;
+parameter LW_INST    = 6'b100011;
+parameter SW_INST    = 6'b101010;
+parameter JMP_INST   = 6'b000010;
 
 parameter S_INS_LW  = 4'b0000;
 parameter S_INS_SW  = 4'b0001;
@@ -131,6 +134,16 @@ always @(*) begin
                        oBranch   = 1'b1;
                    end
         S_INS_OTH: begin 
+                       oRegDst   = 1'b0;
+                       oRegWr    = 1'b0;
+                       oMemtoReg = 1'b0;
+                       oALUOp    = 2'b00; 
+                       oALUSrc   = 1'b0;
+                       oMemWr    = 1'b0;
+                       oMemRd    = 1'b0;
+                       oBranch   = 1'b0;
+                   end
+        S_INS_DEC: begin 
                        oRegDst   = 1'b0;
                        oRegWr    = 1'b0;
                        oMemtoReg = 1'b0;

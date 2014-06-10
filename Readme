@@ -11,6 +11,8 @@ Features:
     The case add.rom can be passed with adding NOP before add instruciton
   * Jun.06.2014
     Add the Data forwarding unit 
+  * Jun.09.2014
+    Add the Data hazard detection
 
 2.Functions
 
